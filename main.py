@@ -1,9 +1,7 @@
-import os
 import time
 import argparse
 import tensorflow as tf
-from epnet import EPNet
-import h5py
+from pdcn_epnet import EPNet
 
 """
 This file provides configuration to build U-NET for semantic segmentation.
@@ -15,7 +13,7 @@ def configure():
     # training
     flags = tf.app.flags
     flags.DEFINE_string('data_type', '3D', '2D or 3D')
-    flags.DEFINE_integer('train_step', 2000, '# of step for training')
+    flags.DEFINE_integer('train_step', 125, '# of step for training')
     flags.DEFINE_integer('test_step', 1, '# of step to test a model')
     flags.DEFINE_integer('save_step', 10, '# of step to save a model')
     flags.DEFINE_integer('summary_step', 1, '# of step to save the summary')
@@ -37,7 +35,7 @@ def configure():
     flags.DEFINE_string('modeldir', './modeldir', 'Model dir')
     flags.DEFINE_string('sampledir', './samples/', 'Sample directory')
     flags.DEFINE_string('model_name', 'shape_complete', 'Model file name')
-    flags.DEFINE_integer('reload_step', 1989, 'Reload step to continue training')
+    flags.DEFINE_integer('reload_step', -1, 'Reload step to continue training')
     #flags.DEFINE_integer('test_step', 0, 'Test or predict model at this step')
     flags.DEFINE_integer('random_seed', int(time.time()), 'random seed')
     # network architecture
@@ -61,8 +59,6 @@ def configure():
 
 def main(_):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--fnum', dest='n', type=int, default=0,
-                        help='fnum: file number')
     parser.add_argument('--action', dest='action', type=str, default='train',
                         help='actions: train, test, or predict')
     args = parser.parse_args()
@@ -74,8 +70,7 @@ def main(_):
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         model = EPNet(tf.Session(config=config), configure())
-        #getattr(model, args.action)(args.n)
-        getattr(model, 'train')()
+        getattr(model, args.action)()
         print('done')
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ import tensorflow as tf
 import h5py
 import os
 import numpy as np
+import time
 from utils import ops
 from copy import deepcopy
 
@@ -181,16 +182,18 @@ class EPNet():
        
     def train(self):
         print('---->Training 3DEPN')
-        #Reload model
-        if self.conf.reload_step > 0:
-            self.reload(self.conf.reload_step)
+        train_step_start = 0
+        if (self.reload(self.conf.reload_step)): # Attempt to reload model
+            train_step_start = self.conf.reload_step
+                
         
-        for epoch in range(self.conf.train_step):
-            save = True
+        for epoch in range(train_step_start, self.conf.train_step):
+            start = time.time()
             for file_itr in range(self.conf.num_train_files):
                 x, y = self.load_data(file_itr, 'train')
                 self.indexes = self.gen_indexes(x)
                 self.current_index = 0
+                
                 while True:
                     x_batch, y_batch = self.get_batch(x, y)
                     if x_batch.shape[0] < self.conf.batch:
@@ -199,19 +202,22 @@ class EPNet():
                     
                     feed_dict = {self.inputs: input, self.mask: mask, self.annotations: labels}
                     loss, _ = self.sess.run([self.loss_op, self.train_op], feed_dict=feed_dict)
-                    print('--Epoch: {} -- File iter: {} --Training loss: {}'.format(epoch, file_itr, loss))
+                    print(self.current_index, '/', len(self.indexes), ' Training loss:', loss)
                     
                 self.f.close()
             
-                if epoch % self.conf.save_step == 0 and save:
-                    self.save(file_itr)
-                if epoch % self.conf.summary_step == 0 and save:
-                    loss, _, summary = self.sess.run(
-                            [self.loss_op, self.train_op, self.train_summary],
-                                    feed_dict=feed_dict)
-                    print('--Training loss:', loss,'   --Epoch: ', epoch)
-                    self.save_summary(summary, epoch + self.conf.reload_step)
-                    save = False
+            if epoch % self.conf.save_step == 0:
+                self.save(epoch)
+            if epoch % self.conf.summary_step == 0:
+                loss, _, summary = self.sess.run(
+                        [self.loss_op, self.train_op, self.train_summary],
+                                feed_dict=feed_dict)
+                print('--Training loss:', loss,'   --Epoch: ', epoch)
+                self.save_summary(summary, epoch)
+            
+            end = time.time()
+            print("------TIME------")
+            print(end - start)                 
         
         print('Training Complete')            
 
@@ -248,7 +254,7 @@ class EPNet():
 
     def predict(self):
         print('--->Prediction 3DEPN')
-        if self.conf.reload_step > 0:
+        if self.conf.reload_step >= 0:
             self.reload(self.conf.reload_step)
 
         x, y = self.load_data(0, 'train')
@@ -290,7 +296,9 @@ class EPNet():
         )
         model_path = checkpoint_path+'-'+str(step)
         if not os.path.exists(model_path+'.meta'):
-            print('---->no checkpoint',model_path)
-            return
+            print('---->no checkpoint', model_path)
+            return False
+        print('---->checkpoint found', model_path)
         print('Restoring Model')
         self.saver.restore(self.sess,model_path)
+        return True

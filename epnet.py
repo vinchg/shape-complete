@@ -2,7 +2,6 @@ import tensorflow as tf
 import h5py
 import os
 import numpy as np
-import random
 import time
 from copy import deepcopy
 
@@ -131,7 +130,6 @@ class EPNet():
 
     def load_data(self, set, type):
         path = self.conf.data_dir + type + '_%d.h5' % set
-        #path = self.conf.data_dir + 'train_0.h5'
         print('Loading:', path)
         self.f = h5py.File(path, 'r')
         x = self.f['data']    # [index, images/spaces, 32, 32, 32] - Range: [0-9999, 0-1, image]
@@ -164,14 +162,11 @@ class EPNet():
         
         return input, mask, labels
        
-    def train(self):
+    def train(self, n):
         print('---->Training 3DEPN')
-        #Reload model
-        if self.conf.reload_step >= 0:
-            if (self.reload(self.conf.reload_step)):
-                train_step_start = self.conf.reload_step
-        else:
-            train_step_start = 0
+        train_step_start = 0
+        if (self.reload(self.conf.reload_step)): # Attempt to reload model
+            train_step_start = self.conf.reload_step
         
         for epoch in range(train_step_start, self.conf.train_step):
             start = time.time()
@@ -189,6 +184,8 @@ class EPNet():
                     feed_dict = {self.inputs: input, self.mask: mask, self.annotations: labels}
                     loss, _ = self.sess.run([self.loss_op, self.train_op], feed_dict=feed_dict)
                     print(self.current_index, '/', len(self.indexes), ' Training loss:', loss)
+                    
+                self.f.close()
 
             if epoch % self.conf.save_step == 0:
                 self.save(epoch)
@@ -197,7 +194,8 @@ class EPNet():
                         [self.loss_op, self.train_op, self.train_summary],
                                 feed_dict=feed_dict)
                 print('--Training loss:', loss,'   --Epoch: ', epoch)
-                self.save_summary(summary, file_itr + self.conf.reload_step)
+                self.save_summary(summary, epoch)
+            
             end = time.time()
             print("------TIME------")
             print(end - start)
@@ -206,9 +204,11 @@ class EPNet():
 
     def test(self, n):
         print('--->Testing 3DEPN')
-        #if self.conf.reload_step > 0:
-        #    self.reload(self.conf.reload_step)
-        self.reload(n - 1)
+        if self.conf.reload_step >= 0: # Reload model if exists
+            if (self.reload(self.conf.reload_step)):
+                train_step_start = self.conf.reload_step
+        else:
+            train_step_start = 0
         
         count = 0
         losses = []
@@ -237,12 +237,12 @@ class EPNet():
         print('Loss: ', np.mean(losses))
         print('Accuracy: ', np.mean(accuracies))
 
-    def predict(self):
+    def predict(self, n):
         print('--->Prediction 3DEPN')
         if self.conf.reload_step >= 0:
             self.reload(self.conf.reload_step)
 
-        x, y = self.load_data(0, 'test')
+        x, y = self.load_data(n, 'train')
         self.indexes = self.gen_indexes(x)
         self.current_index = 0
         
@@ -292,14 +292,11 @@ class EPNet():
         checkpoint_path = os.path.join(
             self.conf.modeldir, self.conf.model_name
         )
-        if step < 0:
-            step = 0
         model_path = checkpoint_path + '-' + str(step)
         if not os.path.exists(model_path+'.meta'):
             print('---->no checkpoint',model_path)
             return False
-        else:
-            print('---->checkpoint found', model_path)
+        print('---->checkpoint found', model_path)
         print('Restoring Model')
         self.saver.restore(self.sess,model_path)
         return True
