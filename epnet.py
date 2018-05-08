@@ -13,7 +13,6 @@ class EPNet():
         self.conf = conf
         self.conv_size = (4,4,4)
         self.axis, self.channel_axis = (1,2,3),4
-        self.conf.conv_size = (4,4,4)
         self.input_shape = [
              conf.batch, conf.height, conf.width, conf.depth, conf.channel,
         ]
@@ -237,7 +236,7 @@ class EPNet():
         if self.conf.reload_step >= 0:
             self.reload(self.conf.reload_step)
 
-        x, y = self.load_data(n, 'train')
+        x, y = self.load_data(0, 'train')
         self.indexes = self.gen_indexes(x)
         self.current_index = 0
         
@@ -254,22 +253,22 @@ class EPNet():
         
         print('----Predicions---')
         #Saves the input and predictions, the input is being spliced and only getting the 0 index(sdf representation).
-        for i in range(1):
+        for i in range(10):
             # The i is the index of the batch, the colons : get every index in dimension, 0 index is the sdf representation.
             #Splits the input into two representations sdf = sign distance field, ku = known/unknown
             sdf = input[i, :, :, :, 0]
-            ku = input[i, :, :, :, 1]
+            #ku = input[i, :, :, :, 1]
             #Reshape prediction and ku to do element wise comparison to get rid of known space output from model
-            ku = np.reshape(ku, (32768, 1))
-            pred = np.reshape(predictions[i], (32768, 1))
-            unknown_pred = np.asarray([3 if y == 1 else x[0] for x, y in zip(pred, ku)])
+            #ku = np.reshape(ku, (32768, 1))
+            #pred = np.reshape(predictions[i], (32768, 1))
+            #unknown_pred = np.asarray([3 if y == 1 else x[0] for x, y in zip(pred, ku)])
             #Reshaping back to 3d representation
-            unknown_pred = np.reshape(unknown_pred, (32, 32, 32))
-            print(unknown_pred)
-            print(ku)
+            #unknown_pred = np.reshape(unknown_pred, (32, 32, 32))
+            #print(predictions[i])
+            #print(ku)
             #Saving
             np.save('testing/input_{}'.format(i), sdf)
-            np.save('testing/prediction_{}'.format(i), unknown_pred)
+            np.save('testing/prediction_{}'.format(i), predictions[i])
 
     def save_summary(self,summary,step):
         print('---->Summarizing')

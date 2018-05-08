@@ -24,19 +24,18 @@ def configure():
     # flags.DEFINE_string('train_data', 'train', 'Training data')
     # flags.DEFINE_string('valid_data', 'validation', 'Validation data')
     # flags.DEFINE_string('test_data', 'test', 'Testing data')
-    flags.DEFINE_integer('batch', 2, 'batch size')
+    flags.DEFINE_integer('batch', 12, 'batch size')
     flags.DEFINE_integer('channel', 2, 'channel size')
     flags.DEFINE_integer('height', 32, 'height size')
     flags.DEFINE_integer('width', 32, 'width size')
     flags.DEFINE_integer('depth', 32, 'depth size')
     flags.DEFINE_integer('channel_axis', 4, 'channel axis')
-    flags.DEFINE_integer('conv_size', 4, 'conv filter size')
     # Debug
     flags.DEFINE_string('logdir', './logdir', 'Log dir')
     flags.DEFINE_string('modeldir', './modeldir', 'Model dir')
     flags.DEFINE_string('sampledir', './samples/', 'Sample directory')
     flags.DEFINE_string('model_name', 'shape_complete', 'Model file name')
-    flags.DEFINE_integer('reload_step', -1, 'Reload step to continue training')
+    flags.DEFINE_integer('reload_step', 1989, 'Reload step to continue training')
     #flags.DEFINE_integer('test_step', 0, 'Test or predict model at this step')
     flags.DEFINE_integer('random_seed', int(time.time()), 'random seed')
     # network architecture
@@ -50,7 +49,7 @@ def configure():
     ##### Architecture Type ####
     #Note: when decoder_type is set as deconv, the pixel_name flag does not affect architecture
     flags.DEFINE_string(
-        'decoder_type', 'pdcn',
+        'decoder_type', 'deconv',
         'define architecture to be used: deconv, pdcn')
     #Now only used to specify type of pixel_dcl
     flags.DEFINE_string(
@@ -66,7 +65,7 @@ def configure():
 
 def main(_):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--action', dest='action', type=str, default='train',
+    parser.add_argument('--action', dest='action', type=str, default='predict',
                         help='actions: train, test, or predict')
     args = parser.parse_args()
     if args.action not in ['train','test','predict']:
@@ -77,7 +76,7 @@ def main(_):
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         model = ep(tf.Session(config=config), configure())
-        getattr(model, args.action)('train')
+        getattr(model, args.action)('predict')
 
         print('done')
 

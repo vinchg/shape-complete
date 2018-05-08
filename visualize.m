@@ -1,7 +1,7 @@
 clear all
 close all
 clc
-f = fopen('prediction_0.npy');
+f = fopen('prediction_4.npy');
 %dim = fread(f, [1, 3], 'uint64')
 o = fread(f, [1, 16], 'uint64');
 format long
