@@ -1,8 +1,7 @@
 import time
 import argparse
 import tensorflow as tf
-from pdcn_epnet import EPNet
-
+from epnet import EPNet as ep
 """
 This file provides configuration to build U-NET for semantic segmentation.
 
@@ -25,7 +24,7 @@ def configure():
     # flags.DEFINE_string('train_data', 'train', 'Training data')
     # flags.DEFINE_string('valid_data', 'validation', 'Validation data')
     # flags.DEFINE_string('test_data', 'test', 'Testing data')
-    flags.DEFINE_integer('batch', 64, 'batch size')
+    flags.DEFINE_integer('batch', 2, 'batch size')
     flags.DEFINE_integer('channel', 2, 'channel size')
     flags.DEFINE_integer('height', 32, 'height size')
     flags.DEFINE_integer('width', 32, 'width size')
@@ -46,12 +45,18 @@ def configure():
     flags.DEFINE_integer('stride', 2, 'stride for convolution')
     flags.DEFINE_integer('start_channel_num', 80,
                          'start number of outputs for the first conv layer')
+    ##### Architecture Type ####
+    #Note: when decoder_type is set as deconv, the pixel_name flag does not affect architecture
+    flags.DEFINE_string(
+        'decoder_type', 'deconv',
+        'define architecture to be used: deconv, pdcn')
+    #Now only used to specify type of pixel_dcl
+    flags.DEFINE_string(
+        'pixel_name','pixel_dcl',
+        'Use which pixel_deconv op in decoder: pixel_dcl, ipixel_dcl')
     flags.DEFINE_string(
         'conv_name', 'conv2d',
         'Use which conv op in decoder: conv2d or ipixel_cl')
-    flags.DEFINE_string(
-        'deconv_name', 'pixel_dcl',
-        'Use which deconv op in decoder: deconv, pixel_dcl, ipixel_dcl')
     # fix bug of flags
     flags.FLAGS.__dict__['__parsed'] = False
     return flags.FLAGS
@@ -69,8 +74,8 @@ def main(_):
         #tf.ConfigProto is used to only require as much GPU mem as needed
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
-        model = EPNet(tf.Session(config=config), configure())
-        getattr(model, args.action)()
+        model = ep(tf.Session(config=config), configure())
+        getattr(model, args.action)('train')
         print('done')
 
 if __name__ == '__main__':

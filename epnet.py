@@ -4,6 +4,8 @@ import os
 import numpy as np
 import time
 from copy import deepcopy
+from utils import encoder_decoder_architectures as eda
+from utils import ops
 
 class EPNet():
     def __init__(self, sess, conf):
@@ -11,6 +13,8 @@ class EPNet():
         self.conf = conf
         self.conv_size = (4,4,4)
         self.axis, self.channel_axis = (1,2,3),4
+        self.conf.channel_axis = self.channel_axis
+        self.conf.conv_size = (4,4,4)
         self.input_shape = [
              conf.batch, conf.height, conf.width, conf.depth, conf.channel,
         ]
@@ -66,67 +70,60 @@ class EPNet():
         return summary
 
     def inference(self, inputs):
+        #Flow of the model, uses reshapes between portions of the network to ensure
+        #compatible layers from encoder -> fcn -> decoder
         outputs = inputs
         down_outputs = []
+        outputs = self.encoder(outputs, down_outputs)
+        outputs = self.bottom_fcn(outputs)
+        outputs = tf.reshape(outputs, [-1,1,1,1,outputs.shape[1].value])
+        outputs = self.decoder(outputs, down_outputs)
+        outputs = tf.reshape(outputs,[-1,self.conf.width,self.conf.height,self.conf.depth])
+        return outputs
+
+    def encoder(self, inputs, down_outputs):
+        #Creates encoder portion of the network by running methods in encoder_decoder_architectures.py
+        outputs = inputs
         for layer_index in range(self.conf.network_down - 1):
             is_first = True if not layer_index else False
             is_last = True if layer_index == self.conf.network_down - 2 else False
             name = 'encoder%s' % layer_index
-            outputs = self.construct_encoder_block(
-                outputs,name,down_outputs,first = is_first,last = is_last
+            outputs = self.encoder_block()(
+                 self.conf, outputs, name, down_outputs, first = is_first,last = is_last
             )
+        return outputs
+
+    def bottom_fcn(self, outputs):
         for layer_index in range(self.conf.fcn_depth):
             is_first = True if not layer_index else False
             name = 'fcn%s' % layer_index
-            outputs = self.construct_fcn(outputs, name, is_first)
-        outputs = tf.reshape(outputs,[-1,1,1,1,outputs.shape[1].value])
+            outputs = self.fcn_block()(
+                self.conf, outputs, name, is_first)
+        return outputs
+
+    def decoder(self, outputs, down_outputs):
         for layer_index in range(self.conf.network_down - 2, -1, -1):
             is_last = True if not layer_index else False
             is_first = True if layer_index == self.conf.network_down - 2 else False
             name = 'decoder%s' %layer_index
             down_inputs = down_outputs[layer_index]
-            outputs = self.construct_decoder_block(
-            outputs, name, down_inputs,is_first, is_last
+            outputs = self.decoder_block()(
+               self.conf, outputs, name, down_inputs, is_first, is_last
             )
-        outputs = tf.reshape(outputs,[-1,self.conf.width,self.conf.height,self.conf.depth])
         return outputs
 
-    def construct_encoder_block(self, inputs, name, down_outputs, first=False, last=False):
-        num_outputs = self.conf.start_channel_num if first else 2 * \
-                                                              inputs.shape[self.channel_axis].value
-        pad = self.conf.pad if not last else self.conf.pad - 1
-        stride = self.conf.stride if not last else (1,1,1)
-        inputs = self.pad_input(inputs,pad)
-        conv1 = tf.layers.conv3d(inputs,num_outputs,self.conv_size,strides=stride,name = name + '/conv1', activation=None,use_bias=True)
-        conv1_bn = tf.contrib.layers.batch_norm(
-            conv1, decay=0.9, activation_fn=tf.nn.relu, updates_collections=None,
-            epsilon=1e-5, scope=name + '/conv1/batch_norm')
-        down_outputs.append(conv1_bn)
-        return conv1_bn
+    def encoder_block(self):
+        #For clean code, run construction_encoder_block in eda from this method instead of encoder directly
+        return getattr(eda, 'construct_encoder_block')
 
-    def construct_fcn(self,inputs,name,first = False):
-        num_outputs = inputs.shape[self.channel_axis].value if first else inputs.shape[1].value
-        inputs = tf.reshape(inputs,[-1,num_outputs]) if first else inputs
-        fcn_1 = tf.layers.dense(inputs, num_outputs,activation=None, use_bias=True,kernel_initializer=tf.contrib.layers.xavier_initializer(),name=name)
-        fcn_1_bn = tf.contrib.layers.batch_norm(
-            fcn_1, decay=0.9, activation_fn=tf.nn.relu, updates_collections=None,
-            epsilon=1e-5, scope=name + '/fcn_1/batch_norm')
-        return fcn_1_bn
+    def fcn_block(self):
+        # For clean code, run construct_fcn in eda from this method instead of bottom_fcn directly
+        return getattr(eda, 'construct_fcn')
 
-    def construct_decoder_block(self,inputs, name, down_inputs, first = False, last = False):
-        num_outputs = 1 if last else int(inputs.shape[self.channel_axis].value / 2)
-        stride = (1,1,1) if first else self.conf.stride
-        cat = tf.concat([inputs, down_inputs], self.channel_axis, name=name + '/concat')
-        deconv1 = tf.layers.conv3d_transpose(cat,num_outputs,self.conv_size if first else stride, strides=stride, name = name + '/deconv1', activation=None, use_bias=True)
-        deconv1_bn = tf.contrib.layers.batch_norm(
-            deconv1, decay=0.9, activation_fn=tf.nn.relu, updates_collections=None,
-            epsilon=1e-5, scope=name + '/deconv1/batch_norm')
-        return deconv1_bn
-
-    def pad_input(self,inputs,pad):
-        paddings = tf.constant([[0, 0], [pad, pad], [pad, pad], [pad, pad], [0, 0]])
-        inputs = tf.pad(inputs, paddings, "CONSTANT")
-        return inputs
+    def decoder_block(self):
+        #For clean code, tun construct_decoder_pcdn/deconv(depending on flags)_block in eda from this method
+        #instead of decoder
+        return getattr(eda, 'construct_decoder_' + self.conf.decoder_type + '_block')
 
     def load_data(self, set, type):
         path = self.conf.data_dir + type + '_%d.h5' % set
@@ -167,7 +164,6 @@ class EPNet():
         train_step_start = 0
         if (self.reload(self.conf.reload_step)): # Attempt to reload model
             train_step_start = self.conf.reload_step
-        
         for epoch in range(train_step_start, self.conf.train_step):
             start = time.time()
             for file_itr in range(self.conf.num_train_files):
@@ -275,8 +271,6 @@ class EPNet():
             np.save('testing/input_{}'.format(i), sdf)
             np.save('testing/prediction_{}'.format(i), unknown_pred)
 
-
-
     def save_summary(self,summary,step):
         print('---->Summarizing')
         self.writer.add_summary(summary, step)
@@ -284,7 +278,7 @@ class EPNet():
     def save(self, step):
         print('---->Saving: ', step)
         checkpoint_path = os.path.join(
-            self.conf.modeldir, self.conf.model_name
+            self.conf.modeldir, self.conf.model_name + '_' + self.conf.deconv_name
         )
         self.saver.save(self.sess, checkpoint_path, global_step=step)
 
