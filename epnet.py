@@ -255,7 +255,7 @@ class EPNet():
         
         print('----Predicions---')
         #Saves the input and predictions, the input is being spliced and only getting the 0 index(sdf representation).
-        for i in range(10):
+        for i in range(1):
             # The i is the index of the batch, the colons : get every index in dimension, 0 index is the sdf representation.
             #Splits the input into two representations sdf = sign distance field, ku = known/unknown
             sdf = input[i, :, :, :, 0]
@@ -267,6 +267,7 @@ class EPNet():
             #Reshaping back to 3d representation
             unknown_pred = np.reshape(unknown_pred, (32, 32, 32))
             print(unknown_pred)
+            print(ku)
             #Saving
             np.save('testing/input_{}'.format(i), sdf)
             np.save('testing/prediction_{}'.format(i), unknown_pred)

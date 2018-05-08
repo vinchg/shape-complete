@@ -29,6 +29,8 @@ def configure():
     flags.DEFINE_integer('height', 32, 'height size')
     flags.DEFINE_integer('width', 32, 'width size')
     flags.DEFINE_integer('depth', 32, 'depth size')
+    flags.DEFINE_integer('channel_axis', 4, 'channel axis')
+    flags.DEFINE_integer('conv_size', 4, 'conv filter size')
     # Debug
     flags.DEFINE_string('logdir', './logdir', 'Log dir')
     flags.DEFINE_string('modeldir', './modeldir', 'Model dir')
@@ -48,7 +50,7 @@ def configure():
     ##### Architecture Type ####
     #Note: when decoder_type is set as deconv, the pixel_name flag does not affect architecture
     flags.DEFINE_string(
-        'decoder_type', 'deconv',
+        'decoder_type', 'pdcn',
         'define architecture to be used: deconv, pdcn')
     #Now only used to specify type of pixel_dcl
     flags.DEFINE_string(
@@ -76,6 +78,7 @@ def main(_):
         config.gpu_options.allow_growth = True
         model = ep(tf.Session(config=config), configure())
         getattr(model, args.action)('train')
+
         print('done')
 
 if __name__ == '__main__':
