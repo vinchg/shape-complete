@@ -13,7 +13,6 @@ class EPNet():
         self.conf = conf
         self.conv_size = (4,4,4)
         self.axis, self.channel_axis = (1,2,3),4
-        self.conf.channel_axis = self.channel_axis
         self.conf.conv_size = (4,4,4)
         self.input_shape = [
              conf.batch, conf.height, conf.width, conf.depth, conf.channel,
@@ -89,7 +88,7 @@ class EPNet():
             is_last = True if layer_index == self.conf.network_down - 2 else False
             name = 'encoder%s' % layer_index
             outputs = self.encoder_block()(
-                 self.conf, outputs, name, down_outputs, first = is_first,last = is_last
+                 self.conf, outputs, name, down_outputs, self.conv_size, first = is_first,last = is_last
             )
         return outputs
 
@@ -108,7 +107,7 @@ class EPNet():
             name = 'decoder%s' %layer_index
             down_inputs = down_outputs[layer_index]
             outputs = self.decoder_block()(
-               self.conf, outputs, name, down_inputs, is_first, is_last
+               self.conf, outputs, name, down_inputs, self.conv_size, is_first, is_last
             )
         return outputs
 
