@@ -157,7 +157,7 @@ class EPNet():
         
         return input, mask, labels
        
-    def train(self, n):
+    def train(self):
         print('---->Training 3DEPN')
         train_step_start = 0
         if (self.reload(self.conf.reload_step)): # Attempt to reload model
@@ -196,7 +196,7 @@ class EPNet():
 
         print('Training Complete')            
 
-    def test(self, n):
+    def test(self):
         print('--->Testing 3DEPN')
         if self.conf.reload_step >= 0: # Reload model if exists
             if (self.reload(self.conf.reload_step)):
@@ -231,7 +231,7 @@ class EPNet():
         print('Loss: ', np.mean(losses))
         print('Accuracy: ', np.mean(accuracies))
 
-    def predict(self, n):
+    def predict(self):
         print('--->Prediction 3DEPN')
         if self.conf.reload_step >= 0:
             self.reload(self.conf.reload_step)

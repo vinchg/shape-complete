@@ -35,7 +35,7 @@ def configure():
     flags.DEFINE_string('modeldir', './modeldir', 'Model dir')
     flags.DEFINE_string('sampledir', './samples/', 'Sample directory')
     flags.DEFINE_string('model_name', 'shape_complete', 'Model file name')
-    flags.DEFINE_integer('reload_step', 1989, 'Reload step to continue training')
+    flags.DEFINE_integer('reload_step', -1, 'Reload step to continue training')
     #flags.DEFINE_integer('test_step', 0, 'Test or predict model at this step')
     flags.DEFINE_integer('random_seed', int(time.time()), 'random seed')
     # network architecture
@@ -49,7 +49,7 @@ def configure():
     ##### Architecture Type ####
     #Note: when decoder_type is set as deconv, the pixel_name flag does not affect architecture
     flags.DEFINE_string(
-        'decoder_type', 'deconv',
+        'decoder_type', 'pdcn',
         'define architecture to be used: deconv, pdcn')
     #Now only used to specify type of pixel_dcl
     flags.DEFINE_string(
@@ -76,7 +76,8 @@ def main(_):
         config = tf.ConfigProto()
         config.gpu_options.allow_growth = True
         model = ep(tf.Session(config=config), configure())
-        getattr(model, args.action)('predict')
+        getattr(model, args.action)()
+        #getattr(model, 'train')()
 
         print('done')
 
