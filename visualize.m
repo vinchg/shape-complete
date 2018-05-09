@@ -1,14 +1,14 @@
 clear all
 close all
 clc
-f = fopen('prediction_4.npy');
+f = fopen('prediction_2.npy');
 %dim = fread(f, [1, 3], 'uint64')
 o = fread(f, [1, 16], 'uint64');
 format long
 m_1 = fread(f, 32768, 'float');
 dim = [32, 32, 32];
 for ind = 1:length(m_1)
-    if  -0.01 < m_1(ind) && m_1(ind)< 0.01
+    if  -0.001 < m_1(ind) && m_1(ind)< 0.001
         m_1(ind) = 3;
     end
 end
@@ -20,9 +20,16 @@ p = patch(isosurface(X, Y, Z, m, .7));
 %p = patch(isosurface(m, 10));
 %now to convert tsdf to volume and mesh
 %isonormals(X,Y,Z,m,p)
-p.FaceColor = 'red';
-p.EdgeColor = 'red';
+%p.FaceColor = 'red';
+
+l = light('Position',[0.6 0.5 0.5],'Style','infinite');
+
+
+p.FaceAlpha = 1;           % remove the transparency
+p.FaceColor = 'red';    % set the face colors to be interpolated
+p.LineStyle = 'none';      % remove the lines
 daspect([1 1 1])
+material 'shiny'
 view(3); 
 %axis tight
 camlight 

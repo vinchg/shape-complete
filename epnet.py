@@ -56,15 +56,7 @@ class EPNet():
     def config_summary(self, name):
         summarys = []
         summarys.append(tf.summary.scalar(name + '/loss', self.loss_op))
-        summarys.append(tf.summary.scalar(name + '/accuracy', self.accuracy_op))
-        if name == 'valid':
-            summarys.append(tf.summary.image(
-                name + '/input', self.inputs, max_outputs=100))
-            summarys.append(tf.summary.image(
-                name +
-                '/annotation', tf.cast(tf.expand_dims(
-                    self.annotations, -1), tf.float32),
-                max_outputs=100))
+        #summarys.append(tf.summary.scalar(name + '/accuracy', self.accuracy_op))
         summary = tf.summary.merge(summarys)
         return summary
 
@@ -185,24 +177,27 @@ class EPNet():
             if epoch % self.conf.save_step == 0:
                 self.save(epoch)
             if epoch % self.conf.summary_step == 0:
-                train_loss, summary = self.sess.run(
-                        [self.loss_op, self.train_summary],
-                                feed_dict=feed_dict)
-                
+
+
                 f_num = random.randint(0,3)
                 #Load testing batch
                 x, y = self.load_data(f_num, 'test')
                 self.indexes = self.gen_indexes(x)
                 self.current_index = 0
+
                 x_batch, y_batch = self.get_batch(x, y)
+                input, mask, labels = self.process_batch(x_batch, y_batch)
                 test_feed_dict = {self.inputs: input, self.mask: mask, self.annotations: labels}
-                test_loss, summary = self.sess.run(
-                        [self.loss_op, self.valid_summary],
-                                feed_dict=test_feed_dict)
+
+                train_loss, train_summary = self.sess.run([self.loss_op, self.train_summary], feed_dict=feed_dict)
+                test_loss, test_summary = self.sess.run([self.loss_op, self.valid_summary],feed_dict=test_feed_dict)
                 self.f.close()
-                
+
+                self.save_summary(train_summary, epoch)
+                self.save_summary(test_summary, epoch)
+
                 print('--Training loss:', train_loss, '  --Validation loss:', test_loss, '   --Epoch: ', epoch)
-                self.save_summary(summary, epoch)
+
             
             end = time.time()
             print("------TIME------")
@@ -223,7 +218,7 @@ class EPNet():
         accuracies = []
         
         #for file_itr in range(self.conf.num_test_files):
-        x, y = self.load_data(n % 4, 'test')
+        x, y = self.load_data(4, 'test')
         self.indexes = self.gen_indexes(x)
         self.current_index = 0
         
