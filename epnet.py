@@ -6,6 +6,7 @@ import time
 from copy import deepcopy
 from utils import encoder_decoder_architectures as eda
 from utils import ops
+import random
 
 class EPNet():
     def __init__(self, sess, conf):
@@ -184,10 +185,23 @@ class EPNet():
             if epoch % self.conf.save_step == 0:
                 self.save(epoch)
             if epoch % self.conf.summary_step == 0:
-                loss, _, summary = self.sess.run(
-                        [self.loss_op, self.train_op, self.train_summary],
+                train_loss, summary = self.sess.run(
+                        [self.loss_op, self.train_summary],
                                 feed_dict=feed_dict)
-                print('--Training loss:', loss,'   --Epoch: ', epoch)
+                
+                f_num = random.randint(0,3)
+                #Load testing batch
+                x, y = self.load_data(f_num, 'test')
+                self.indexes = self.gen_indexes(x)
+                self.current_index = 0
+                x_batch, y_batch = self.get_batch(x, y)
+                test_feed_dict = {self.inputs: input, self.mask: mask, self.annotations: labels}
+                test_loss, summary = self.sess.run(
+                        [self.loss_op, self.valid_summary],
+                                feed_dict=test_feed_dict)
+                self.f.close()
+                
+                print('--Training loss:', train_loss, '  --Validation loss:', test_loss, '   --Epoch: ', epoch)
                 self.save_summary(summary, epoch)
             
             end = time.time()
@@ -277,7 +291,7 @@ class EPNet():
     def save(self, step):
         print('---->Saving: ', step)
         checkpoint_path = os.path.join(
-            self.conf.modeldir, self.conf.model_name + '_' + self.conf.deconv_name
+            self.conf.modeldir, self.conf.model_name + '_' + self.conf.decoder_type
         )
         self.saver.save(self.sess, checkpoint_path, global_step=step)
 

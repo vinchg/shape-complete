@@ -12,9 +12,9 @@ def configure():
     # training
     flags = tf.app.flags
     flags.DEFINE_string('data_type', '3D', '2D or 3D')
-    flags.DEFINE_integer('train_step', 125, '# of step for training')
+    flags.DEFINE_integer('train_step', 125, '# of step for trainingt')
     flags.DEFINE_integer('test_step', 1, '# of step to test a model')
-    flags.DEFINE_integer('save_step', 10, '# of step to save a model')
+    flags.DEFINE_integer('save_step', 5, '# of step to save a model')
     flags.DEFINE_integer('summary_step', 1, '# of step to save the summary')
     flags.DEFINE_float('learning_rate', 1e-3, 'learning rate')
     # data
@@ -24,7 +24,7 @@ def configure():
     # flags.DEFINE_string('train_data', 'train', 'Training data')
     # flags.DEFINE_string('valid_data', 'validation', 'Validation data')
     # flags.DEFINE_string('test_data', 'test', 'Testing data')
-    flags.DEFINE_integer('batch', 12, 'batch size')
+    flags.DEFINE_integer('batch', 64, 'batch size')
     flags.DEFINE_integer('channel', 2, 'channel size')
     flags.DEFINE_integer('height', 32, 'height size')
     flags.DEFINE_integer('width', 32, 'width size')
@@ -65,7 +65,7 @@ def configure():
 
 def main(_):
     parser = argparse.ArgumentParser()
-    parser.add_argument('--action', dest='action', type=str, default='predict',
+    parser.add_argument('--action', dest='action', type=str, default='train',
                         help='actions: train, test, or predict')
     args = parser.parse_args()
     if args.action not in ['train','test','predict']:
